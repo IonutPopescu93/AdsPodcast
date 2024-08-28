@@ -8,7 +8,10 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
+import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.stream.Collectors;
 
 import static com.podcast.utils.JsonUtil.populateObjectFromJsonString;
 
@@ -21,11 +24,11 @@ public class PodcastService {
      * @return
      * @throws IOException
      */
-    public static List<PodcastShow> getPodcastsFromFile() throws IOException {
+    public static List<PodcastShow> getPodcastsFromFile(String filePath) throws IOException {
         List<PodcastShow> podcastShowList = new ArrayList<>();
 
         //Get the file
-        File downloadFile = new File("src/resources/downloads.txt");
+        File downloadFile = new File(filePath);
         BufferedReader podcastFile = null;
 
         //Read the file if exists
@@ -79,6 +82,8 @@ public class PodcastService {
         DataStoreManager.addToDataStore("numberOfViews", numberOfViews);
     }
 
+
+
     /**
      * This method get the most used device and calculte the number of use
      *
@@ -118,5 +123,70 @@ public class PodcastService {
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .forEach(entry -> System.out.println("Show id: " + entry.getKey() + ", Preroll Opportunity Number: " + entry.getValue()));
         DataStoreManager.addToDataStore("prerollOpportunities", prerollOpportunities);
+    }
+
+
+    public static void calculateWeeklyShows(List<PodcastShow> podcastShowList) {
+        Map<String, Set<Timestamp>> show = new HashMap<>();
+        Map<String, String> weeklyShows = new HashMap<>();
+        //Group timeStamps by showId
+        for (PodcastShow podcastShow : podcastShowList) {
+            String showId = podcastShow.getDownloadIdentifier().getShowId();
+
+            Set<Timestamp> time = new TreeSet<>();
+
+            List<PodcastShow> filteredShows = podcastShowList.stream()
+                    .filter(podcast -> podcast.getDownloadIdentifier().getShowId().equals(showId))
+                    .collect(Collectors.toList());
+
+            for (PodcastShow filteredShow : filteredShows) {
+                for (Opportunity opportunity : filteredShow.getOpportunities()) {
+                    time.add(opportunity.getOriginalEventTime());
+                }
+                filteredShow.getOpportunities().get(0).getOriginalEventTime();
+            }
+            show.put(showId, time);
+        }
+
+
+        for (Map.Entry<String, Set<Timestamp>> showEntry : show.entrySet()) {
+            String showId = showEntry.getKey();
+            Set<Timestamp> timestamps = showEntry.getValue();
+
+            if (isWeeklyShow(timestamps)) {
+                Timestamp firstTimestamp = timestamps.iterator().next();
+                SimpleDateFormat dayFormat = new SimpleDateFormat("E");
+                dayFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+                SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
+                timeFormat.setTimeZone(TimeZone.getTimeZone("UTC"));
+                String dayOfTheWeeke = dayFormat.format(firstTimestamp);
+                String timeOfDay = timeFormat.format(firstTimestamp);
+
+                weeklyShows.put(showId, dayOfTheWeeke + " " + timeOfDay);
+                System.out.println("Weekly show: " + showId + " - " + dayOfTheWeeke + " " + timeOfDay);
+            }
+
+            DataStoreManager.addToDataStore("weeklyShows", weeklyShows);
+        }
+    }
+
+    private static boolean isWeeklyShow(Set<Timestamp> timestamps) {
+        if (timestamps.size() < 2) {
+            return false;
+        }
+
+        Iterator<Timestamp> timestampIterator = timestamps.iterator();
+        Timestamp previous = timestampIterator.next();
+
+        while (timestampIterator.hasNext()) {
+            Timestamp currentTime = timestampIterator.next();
+            long difference = currentTime.getTime() - previous.getTime();
+
+            if (Math.abs(difference - 7L * 24 * 60 * 60 * 1000) > 60 * 1000) {
+                return false;
+            }
+            previous = currentTime;
+        }
+        return true;
     }
 }

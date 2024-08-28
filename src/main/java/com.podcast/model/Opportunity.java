@@ -1,19 +1,20 @@
 package com.podcast.model;
 
+import java.sql.Timestamp;
 import java.util.Map;
 
 public class Opportunity {
-    private Long originalEventTime;
+    private Timestamp originalEventTime;
     private int maxDuration;
     private Map<String, Zone> zones;
     private PositionUrlSegments positionUrlSegments;
     private int insertionRate;
 
-    public Long getOriginalEventTime() {
+    public Timestamp getOriginalEventTime() {
         return originalEventTime;
     }
 
-    public void setOriginalEventTime(Long originalEventTime) {
+    public void setOriginalEventTime(Timestamp originalEventTime) {
         this.originalEventTime = originalEventTime;
     }
 

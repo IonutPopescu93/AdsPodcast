@@ -32,6 +32,14 @@ public class PodcastValidation {
         validate(DataStoreManager.getFromDataStore("prerollOpportunities"), expectedPrerollOpportunities);
     }
 
+
+    public static void validateWeeklyShows(Map<String, String> weeklyShows) {
+        if (!DataStoreManager.containsKey("weeklyShows")) {
+            throw new RuntimeException("Desired object to validate was not found in DataStore");
+        }
+        validate(DataStoreManager.getFromDataStore("weeklyShows"), weeklyShows);
+    }
+
     private static void validate(Object actualResponse, Object expectedResponse) {
         SoftAssertions softAssertions = new SoftAssertions();
         softAssertions.assertThat(actualResponse).isEqualTo(expectedResponse);
